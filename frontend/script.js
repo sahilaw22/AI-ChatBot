@@ -92,7 +92,8 @@ function initApp() {
 
   // Step 5: Show welcome message if this is first visit
   if (!chatHistory.length) {
-    addBotMessage("Hi! I'm your GCET College Assistant. I can help with timetables, exam schedules, and study materials. What would you like to know?");
+    const welcomeName = userContext.name ? `, ${userContext.name}` : '';
+    addBotMessage(`Hi${welcomeName}! I'm your GCET Jammu College Assistant. I can help with academic information, placement guidance, technical queries, and more. What would you like to know? 😊`);
   }
 
   // Step 6: Initialize UI components
@@ -231,8 +232,12 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        text: text, 
-        context: userContext // Include student's branch/semester/batch
+        text: text,
+        userId: getUserId(),
+        context: {
+          ...userContext,
+          userName: userContext.name || 'Student'
+        }
       })
     });
     
@@ -497,12 +502,180 @@ function updateVoiceUI(active) {
 function handleDocUpload(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
-  uploadedDoc = file;
-  expandSheetTools();
-  updateDocStatus();
-  const safeName = escapeHtml(file.name);
-  addBotMessage(`Document <strong>${safeName}</strong> uploaded. Tap summarise for a quick overview.`, true);
+  
+  // Upload file to backend
+  uploadFileToBackend(file);
   event.target.value = '';
+}
+
+async function uploadFileToBackend(file) {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('semester', userContext.semester || '');
+    formData.append('branch', userContext.branch || '');
+    formData.append('userId', getUserId());
+
+    showTypingIndicator();
+    addBotMessage('Uploading file...', true);
+
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    hideTypingIndicator();
+
+    if (!res.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const result = await res.json();
+    
+    if (result.ok) {
+      uploadedDoc = result.file;
+      updateDocStatus();
+      addBotMessage(`✅ File uploaded successfully: <strong>${escapeHtml(result.file.originalName)}</strong> (${formatFileSize(result.file.size)}). You can now access it anytime!`, true);
+    } else {
+      addBotMessage('❌ Upload failed. Please try again.', true);
+    }
+  } catch (error) {
+    hideTypingIndicator();
+    console.error('Upload error:', error);
+    
+    // Fallback to local storage
+    uploadedDoc = file;
+    expandSheetTools();
+    updateDocStatus();
+    const safeName = escapeHtml(file.name);
+    addBotMessage(`Document <strong>${safeName}</strong> saved locally. (Backend not available)`, true);
+  }
+}
+
+async function showUploadedFiles() {
+  try {
+    showTypingIndicator();
+    
+    const semester = userContext.semester || '';
+    const url = semester ? `${API_BASE}/files?semester=${semester}` : `${API_BASE}/files`;
+    
+    const res = await fetch(url);
+    
+    hideTypingIndicator();
+    
+    if (!res.ok) throw new Error('Failed to fetch files');
+    
+    const result = await res.json();
+    
+    if (result.ok && result.files && result.files.length > 0) {
+      displayUploadedFiles(result.files);
+    } else {
+      addBotMessage('No uploaded files found. Upload some files to get started! 📁', true);
+    }
+  } catch (error) {
+    hideTypingIndicator();
+    console.error('Error fetching files:', error);
+    addBotMessage('Could not fetch uploaded files. Make sure the backend is running.', true);
+  }
+}
+
+function displayUploadedFiles(files) {
+  const filesHtml = files.map(file => {
+    const fileUrl = `http://localhost:4000${file.file_url}`;
+    const uploadDate = new Date(file.uploaded_at).toLocaleDateString();
+    const fileIcon = getFileIcon(file.original_name);
+    
+    return `
+      <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 8px 0; border-left: 3px solid #7b3ff2;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="font-size: 20px;">${fileIcon}</span>
+          <strong style="flex: 1; font-size: 14px;">${escapeHtml(file.original_name)}</strong>
+        </div>
+        <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+          ${file.semester ? `Semester ${file.semester} • ` : ''}Uploaded: ${uploadDate}
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="window.open('${fileUrl}', '_blank')" style="background: #7b3ff2; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+            📥 Download
+          </button>
+          <button onclick="deleteFile(${file.id})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+            🗑️ Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  const message = `
+    <div style="max-height: 400px; overflow-y: auto;">
+      <h4 style="margin-top: 0;">📁 Uploaded Files (${files.length})</h4>
+      ${filesHtml}
+    </div>
+  `;
+  
+  addBotMessage(message, true);
+}
+
+async function deleteFile(fileId) {
+  if (!confirm('Are you sure you want to delete this file?')) return;
+  
+  try {
+    showTypingIndicator();
+    
+    const res = await fetch(`${API_BASE}/files/${fileId}`, {
+      method: 'DELETE'
+    });
+    
+    hideTypingIndicator();
+    
+    if (!res.ok) throw new Error('Delete failed');
+    
+    const result = await res.json();
+    
+    if (result.ok) {
+      addBotMessage('✅ File deleted successfully!', true);
+      // Refresh the file list
+      setTimeout(() => showUploadedFiles(), 500);
+    } else {
+      addBotMessage('❌ Failed to delete file.', true);
+    }
+  } catch (error) {
+    hideTypingIndicator();
+    console.error('Delete error:', error);
+    addBotMessage('❌ Error deleting file. Please try again.', true);
+  }
+}
+
+function getFileIcon(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  const icons = {
+    'pdf': '📄',
+    'doc': '📝',
+    'docx': '📝',
+    'ppt': '📊',
+    'pptx': '📊',
+    'txt': '📃',
+    'xls': '📗',
+    'xlsx': '📗',
+    'zip': '🗜️',
+    'rar': '🗜️'
+  };
+  return icons[ext] || '📎';
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function getUserId() {
+  let userId = localStorage.getItem('userId');
+  if (!userId) {
+    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('userId', userId);
+  }
+  return userId;
 }
 
 function updateDocStatus() {
@@ -709,20 +882,66 @@ function summariseDocument() {
 }
 
 function saveContext() {
+  const nameInput = document.getElementById('nameInput');
+  const name = nameInput ? nameInput.value.trim() : '';
+  
   userContext = {
+    name: name || 'Student',
     branch: document.getElementById('branchSelect').value,
     semester: parseInt(document.getElementById('semesterSelect').value, 10) || 1,
     batch: document.getElementById('batchSelect').value
   };
+  
   localStorage.setItem('userContext', JSON.stringify(userContext));
+  
+  // Save profile to backend
+  saveProfileToBackend(userContext);
+  
   const modal = document.getElementById('contextModal');
   if (modal) modal.classList.add('hidden');
-  addBotMessage(`Great! I'll remember you're in ${userContext.branch} Semester ${userContext.semester}, Batch ${userContext.batch}.`);
+  
+  const greeting = name ? `Great, ${name}!` : 'Great!';
+  addBotMessage(`${greeting} I'll remember you're in ${userContext.branch} Semester ${userContext.semester}, Batch ${userContext.batch}. How can I help you today? 😊`);
+}
+
+async function saveProfileToBackend(context) {
+  try {
+    await fetch(`${API_BASE}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: getUserId(),
+        branch: context.branch,
+        semester: context.semester,
+        batch: context.batch
+      })
+    });
+  } catch (error) {
+    console.log('Could not save profile to backend:', error);
+  }
 }
 
 function openContextModal() {
   const modal = document.getElementById('contextModal');
   if (modal) modal.classList.remove('hidden');
+  
+  // Pre-fill form with saved values
+  if (userContext.name) {
+    const nameInput = document.getElementById('nameInput');
+    if (nameInput) nameInput.value = userContext.name;
+  }
+  if (userContext.branch) {
+    const branchSelect = document.getElementById('branchSelect');
+    if (branchSelect) branchSelect.value = userContext.branch;
+  }
+  if (userContext.semester) {
+    const semesterSelect = document.getElementById('semesterSelect');
+    if (semesterSelect) semesterSelect.value = userContext.semester;
+  }
+  if (userContext.batch) {
+    const batchSelect = document.getElementById('batchSelect');
+    if (batchSelect) batchSelect.value = userContext.batch;
+  }
 }
 
 function showTyping() { showTypingIndicator(); }

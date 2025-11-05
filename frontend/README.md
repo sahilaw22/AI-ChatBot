@@ -1,56 +1,263 @@
-# GCET College Assistant 🎓
+# GCET Jammu Assistant - Frontend 🎓
 
-**Your intelligent college companion for timetables, exams, and study materials**
+**Your intelligent college companion powered by Google Gemini AI**
 
-A modern, mobile-first chatbot interface designed specifically for GCET students. This application helps students access their class schedules, exam dates, and study materials through an intuitive chat interface with voice support.
+A modern, mobile-first chatbot interface designed specifically for GCET Jammu (Chak Bhalwal, Jammu & Kashmir) students. This application provides AI-powered assistance for college information, admissions, placements, hostel facilities, and more.
 
 ---
 
 ## ✨ Features
 
 ### Core Functionality
-- 💬 **Smart Chat Interface** - Natural conversation flow with typing indicators
-- 📅 **Timetable Access** - View your daily class schedule with teacher and room details
-- 📝 **Exam Schedule** - See upcoming exams with countdown timers
-- 📚 **Study Materials** - Access and preview PDF notes and question papers
-- 🎤 **Voice Input** - Hands-free operation using speech recognition
-- 🌓 **Dark Mode** - Eye-friendly theme that switches automatically
-- 📱 **Mobile-First Design** - Looks great on phones and tablets
+- 💬 **AI-Powered Chat** - Intelligent responses using Google Gemini 2.5 Flash
+- 🎤 **Voice Input** - Hands-free operation with speech recognition
+- � **File Management** - Upload, view, download, and delete study materials
+- 👤 **Personalized Experience** - Name-based greetings and profile management
+- 🌓 **Dark/Light Mode** - Eye-friendly theme toggle
+- 📱 **Responsive Design** - Works seamlessly on all devices
 
 ### Smart Features
-- **Profile Management** - Saves your branch, semester, and batch
-- **Chat History** - Keeps track of all your conversations
-- **Swipe Gestures** - Intuitive sheet controls for better UX
-- **Offline Support** - Works with demo data even without internet
-- **Session Persistence** - Remembers your settings across visits
+- **Profile System** - Save name, branch (CSE/ECE/ME/CE/EE), semester, and batch
+- **Chat History** - Persistent conversation storage with localStorage
+- **File Upload** - Support for PDF, DOC, DOCX, TXT, PPT, PPTX (up to 50MB)
+- **Quick Actions** - About GCET, Placements, Hostel, Coding Tips
+- **Context Awareness** - AI remembers your profile and conversation history
+- **Offline Fallback** - Graceful error handling when backend is unavailable
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Backend server running on `http://localhost:4000` (see `../Source/README.md`)
+
+### Installation
+
+1. **Open the frontend:**
+   ```bash
+   # Option 1: Using Live Server (VS Code extension)
+   Right-click index.html → Open with Live Server
+   
+   # Option 2: Open directly in browser
+   Double-click index.html
+   ```
+
+2. **Set up your profile:**
+   - Enter your name (optional)
+   - Select branch: CSE, ECE, ME, CE, or EE
+   - Choose semester (1-8)
+   - Select batch year
+   - Click "Save"
+
+3. **Start chatting:**
+   - Type messages or use voice input
+   - Upload files for easy access
+   - Use quick action chips for common queries
 
 ---
 
 ## 📁 Project Structure
 
 ```
-chatbot/
+frontend/
 ├── index.html      # Main chat interface
-├── intro.html      # Welcome/landing page
-├── style.css       # All styling and themes
-├── script.js       # Application logic and interactions
+├── intro.html      # Welcome/landing page (legacy)
+├── style.css       # Styling, themes, and animations
+├── script.js       # Application logic and API integration
+├── LICENSE         # MIT License
 └── README.md       # This file
 ```
 
 ### File Descriptions
 
-**index.html** - The main chat application
-- Phone-style container with header
-- Scrollable chat area for messages
-- Bottom sheet with quick action chips
-- Profile setup modal
-- PDF preview modal
+**index.html** - Main chat application
+- Modern chat interface with mobile-first design
+- Profile setup modal (name, branch, semester, batch)
+- File upload/management UI
+- Theme toggle (dark/light mode)
 - Chat history drawer
+- Quick action chips
 
-**intro.html** - Introduction and welcome page
-- Hero card with app branding
-- Feature showcase with icons
-- Fixed "Enter Assistant" button
+**script.js** - Frontend logic (1147 lines)
+- API integration with backend (`http://localhost:4000/api`)
+- File upload with FormData (single/multiple files)
+- User profile management and localStorage persistence
+- Chat history and message rendering
+- Voice input using Web Speech API
+- Theme management
+- Error handling and offline support
+
+**style.css** - Complete styling
+- Mobile-responsive design
+- Dark/light theme support
+- Smooth animations and transitions
+- Form styling for profile inputs
+- File upload UI components
+- Chat bubbles and message formatting
+
+---
+
+## 🔌 API Integration
+
+The frontend connects to the backend API at `http://localhost:4000/api`
+
+### Endpoints Used:
+- `POST /api/query` - Send messages and receive AI responses
+- `GET /api/history/:userId` - Retrieve chat history
+- `DELETE /api/history/:userId` - Clear chat history
+- `POST /api/profile` - Save user profile
+- `POST /api/upload` - Upload single file
+- `POST /api/upload-multiple` - Upload multiple files
+- `GET /api/files` - Get all uploaded files
+- `GET /api/files/:id` - Download specific file
+- `DELETE /api/files/:id` - Delete file
+- `GET /api/faqs` - Get GCET Jammu FAQs
+
+### Configuration
+To change the API endpoint (for production deployment):
+```javascript
+// In script.js, line 12
+const API_BASE = 'https://your-domain.com/api';
+```
+
+---
+
+## 💾 Data Storage
+
+### LocalStorage Keys:
+- `chatHistory` - Array of conversation messages
+- `userContext` - User profile (name, branch, semester, batch)
+- `userId` - Unique identifier for the user
+- `isDarkMode` - Theme preference (true/false)
+
+### Backend Sync:
+- Profile automatically synced to backend on save
+- Files stored on backend with metadata
+- Chat history retrievable from backend
+
+---
+
+## 🎨 Customization
+
+### Change Theme Colors
+Edit `style.css`:
+```css
+:root {
+  --primary: #7c3aed;        /* Purple */
+  --primary-dark: #6d28d9;
+  --accent: #ec4899;         /* Pink */
+  /* Customize other colors */
+}
+```
+
+### Add Quick Action Chips
+Edit `index.html`:
+```html
+<div class="chip">Your New Action</div>
+```
+
+### Modify Welcome Message
+Edit `script.js`, function `initApp()`:
+```javascript
+const welcomeMessage = "Your custom welcome message";
+```
+
+---
+
+## 📱 Mobile Features
+
+- **Touch Gestures** - Swipe to expand/collapse bottom sheet
+- **Responsive Layout** - Adapts to screen size
+- **Mobile-First Design** - Optimized for phones (320px+)
+- **Voice Input** - Works on mobile browsers with mic permission
+- **File Upload** - Native file picker on mobile devices
+
+---
+
+## 🔧 Troubleshooting
+
+### Backend Not Responding
+- Ensure backend is running: `cd ../Source && npm start`
+- Check console for CORS errors
+- Verify API_BASE URL in script.js
+
+### File Upload Fails
+- Check file size (max 50MB)
+- Verify file format (PDF, DOC, DOCX, TXT, PPT, PPTX)
+- Ensure backend has write permissions in uploads folder
+
+### Voice Input Not Working
+- Grant microphone permission in browser
+- Use HTTPS or localhost (required by Web Speech API)
+- Check browser compatibility (Chrome/Edge recommended)
+
+### Chat History Not Saving
+- Check localStorage is enabled in browser
+- Clear browser cache and reload
+- Verify userId is generated (check console)
+
+---
+
+## 🌐 Browser Support
+
+| Browser | Version | Status |
+|---------|---------|--------|
+| Chrome | 90+ | ✅ Fully Supported |
+| Edge | 90+ | ✅ Fully Supported |
+| Firefox | 88+ | ✅ Fully Supported |
+| Safari | 14+ | ⚠️ Voice input limited |
+| Opera | 76+ | ✅ Fully Supported |
+
+---
+
+## 📄 License
+
+MIT License - See `LICENSE` file for details
+
+---
+
+## 🤝 Contributing
+
+This is a college project for GCET Jammu. For improvements:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+---
+
+## 📞 Support
+
+For GCET Jammu specific queries, the AI assistant can help with:
+- 🏛️ College information and facilities
+- 📚 Admission process (JEE Main, JKCET)
+- 🎓 Available branches and courses
+- 💼 Placement opportunities
+- 🏠 Hostel facilities
+- 💻 Coding and skill development tips
+
+---
+
+## 🚀 Deployment
+
+### Option 1: Static Hosting (Netlify, Vercel)
+1. Push code to GitHub
+2. Connect repository to Netlify/Vercel
+3. Update `API_BASE` in script.js to production backend URL
+4. Deploy
+
+### Option 2: Traditional Web Server
+1. Upload files to web server (Apache, Nginx)
+2. Configure CORS on backend
+3. Update `API_BASE` in script.js
+4. Access via domain
+
+---
+
+**Built with ❤️ for GCET Jammu Students**
+
 - Profile setup on first visit
 
 **style.css** - Complete styling system
